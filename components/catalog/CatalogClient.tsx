@@ -28,6 +28,7 @@ export default function CatalogClient({ shipment, allProducts }: CatalogClientPr
   const [origin, setOrigin] = useState('')
   const [flowerType, setFlowerType] = useState('')
   const [stockOnly, setStockOnly] = useState(false)
+  const [visibleCount, setVisibleCount] = useState(30)
   const { toasts } = useCart()
 
   useEffect(() => {
@@ -59,6 +60,12 @@ export default function CatalogClient({ shipment, allProducts }: CatalogClientPr
 
     return results
   }, [allProducts, origin, flowerType, stockOnly, search])
+
+  const visibleProducts = useMemo(() => filteredProducts.slice(0, visibleCount), [filteredProducts, visibleCount])
+
+  useEffect(() => {
+    setVisibleCount(30)
+  }, [origin, flowerType, stockOnly, search])
 
   const handleExportPDF = () => {
     const params = new URLSearchParams()
@@ -106,13 +113,31 @@ export default function CatalogClient({ shipment, allProducts }: CatalogClientPr
 
       <section>
         {filteredProducts.length > 0 ? (
-          filteredProducts.map((product, index) => (
-            <ProductRow key={product.shipment_product_id} product={product} mode={mode} index={index} onOpenDetail={() => setSelectedProduct(product)} />
+          visibleProducts.map((product, index) => (
+            <ProductRow
+              key={product.shipment_product_id}
+              product={product}
+              mode={mode}
+              index={index}
+              priority={index < 6}
+              onOpenDetail={() => setSelectedProduct(product)}
+            />
           ))
         ) : (
           <div className="px-4 py-20 text-center text-[11px] uppercase tracking-[0.12em] text-brand-green/55">No products match your filters.</div>
         )}
       </section>
+      {visibleCount < filteredProducts.length && (
+        <div className="flex justify-center py-8">
+          <button
+            type="button"
+            onClick={() => setVisibleCount((prev) => prev + 30)}
+            className="font-mono text-[10px] uppercase tracking-[0.15em] text-brand-green/60 border border-brand-green/20 px-6 py-3 hover:text-brand-green hover:border-brand-green/40 transition-colors"
+          >
+            LOAD MORE · {filteredProducts.length - visibleCount} REMAINING
+          </button>
+        </div>
+      )}
 
       <div className="px-4 py-8 text-center">
         <Link href="/b2b" className="font-mono text-[9px] uppercase tracking-[0.08em] text-brand-green/40 hover:text-brand-green/55">

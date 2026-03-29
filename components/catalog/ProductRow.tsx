@@ -14,6 +14,7 @@ interface ProductRowProps {
   index: number
   mode: 'b2b' | 'b2c'
   onOpenDetail?: () => void
+  priority?: boolean
 }
 
 const ORIGIN_TO_FILE: Record<Origin, string> = {
@@ -43,7 +44,7 @@ function MobileOriginBadge({ origin }: { origin: Origin }) {
   )
 }
 
-export default function ProductRow({ product, index, mode, onOpenDetail }: ProductRowProps) {
+export default function ProductRow({ product, index, mode, onOpenDetail, priority = false }: ProductRowProps) {
   const { addToCartWithPosition, cartItems } = useCart()
   const [flashAdded, setFlashAdded] = useState(false)
   const cartItem = cartItems.find((item) => item.product_id === product.id)
@@ -77,7 +78,7 @@ export default function ProductRow({ product, index, mode, onOpenDetail }: Produ
           onOpenDetail?.()
         }}
       >
-        <ProductImage src={product.image_url} alt={`${product.name} ${product.variety}`} />
+        <ProductImage src={product.image_url} alt={`${product.name} ${product.variety}`} priority={priority} />
         {isInCart ? (
           <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-brand-green flex items-center justify-center">
             <span className="text-[9px] font-mono text-brand-bg font-bold">{cartQuantity}</span>

@@ -5,9 +5,10 @@ import Image from 'next/image'
 interface ProductImageProps {
   src: string | null
   alt: string
+  priority?: boolean
 }
 
-export default function ProductImage({ src, alt }: ProductImageProps) {
+export default function ProductImage({ src, alt, priority = false }: ProductImageProps) {
   if (!src) {
     return (
       <div className="flex h-[88px] w-[88px] items-center justify-center bg-[var(--brand-skeleton-base)]" role="img" aria-label="Product image placeholder">
@@ -25,14 +26,19 @@ export default function ProductImage({ src, alt }: ProductImageProps) {
   }
 
   return (
-    <Image
-      src={src}
-      alt={alt}
-      width={88}
-      height={88}
-      className="block h-[88px] w-[88px] object-cover"
-      unoptimized
-    />
+    <div className="h-[88px] w-[88px] overflow-hidden">
+      <Image
+        src={src}
+        alt={alt}
+        width={88}
+        height={88}
+        loading={priority ? 'eager' : 'lazy'}
+        priority={priority}
+        quality={60}
+        className="object-cover w-full h-full"
+        sizes="88px"
+      />
+    </div>
   )
 }
 

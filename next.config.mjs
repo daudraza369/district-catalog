@@ -2,6 +2,10 @@
 const nextConfig = {
   output: 'standalone',
   images: {
+    formats: ['image/webp'],
+    deviceSizes: [640, 828, 1080],
+    imageSizes: [88, 176],
+    minimumCacheTTL: 86400,
     remotePatterns: [
       {
         protocol: 'https',
