@@ -1,0 +1,82 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand-bg: #fbfbf8;
+  --brand-bg-secondary: #f4f3ee;
+  --brand-green: #20322a;
+  --brand-lavender: #816aa0;
+  --brand-rose: #e85a6b;
+  --brand-border: rgba(32, 50, 42, 0.15);
+  --brand-border-strong: rgba(32, 50, 42, 0.35);
+  --brand-hover: #eae9e2;
+  --brand-skeleton-base: #e8e7e0;
+  --brand-skeleton-highlight: #f4f3ee;
+}
+
+body {
+  color: var(--brand-green);
+  background: var(--brand-bg);
+  font-family: var(--font-pp-fragment), sans-serif;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .focus-brand {
+    outline: 2px solid rgba(32, 50, 42, 0.4);
+    outline-offset: 1px;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--brand-skeleton-base) 0%,
+    var(--brand-skeleton-highlight) 50%,
+    var(--brand-skeleton-base) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes floatUp {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-40px);
+    opacity: 0;
+  }
+}
+
+@keyframes shakeX {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  50% { transform: translateX(6px); }
+  75% { transform: translateX(-4px); }
+}

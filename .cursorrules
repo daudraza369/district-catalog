@@ -1,0 +1,52 @@
+---
+You are building a premium B2B wholesale catalog for District Flowers, a high-end flower importer based in Riyadh, Saudi Arabia.
+
+DESIGN PHILOSOPHY:
+- Editorial luxury aesthetic — think Wallpaper* magazine meets wholesale trade
+- Every pixel must feel intentional. No generic AI-generated UI.
+- Whitespace is used generously. Density only where it serves function.
+- Typography carries the design — Playfair Display for product names, DM Mono for all data, labels, prices, and UI chrome
+
+BRAND TOKENS (never deviate from these):
+- Background primary: #fbfbf8
+- Background secondary: #f4f3ee
+- Brand green: #20322a
+- Lavender accent: #816aa0
+- Rose accent: #E85A6B
+- Border default: rgba(32,50,42,0.15)
+- Border emphasis: rgba(32,50,42,0.35)
+
+TYPOGRAPHY RULES:
+- Flower names: Playfair Display, 18-20px, weight 700, color #20322a
+- Product subtitle: DM Mono, 11px, weight 400, letter-spacing 0.08em, color rgba(32,50,42,0.55), ALL CAPS
+- Column headers: DM Mono, 9px, weight 400, letter-spacing 0.15em, ALL CAPS, color rgba(32,50,42,0.5)
+- Prices: DM Mono, 16px, weight 500, color #20322a
+- UI labels: DM Mono, 10-11px, letter-spacing 0.1em, ALL CAPS
+
+COMPONENT RULES:
+- Buttons: 2-4px border-radius max. Flat. Never rounded pill shapes.
+- Inputs: 1px border, no border-radius. Clean rectangular.
+- Rows: no drop shadows. Borders only. Alternating background.
+- Country badges: 32px circle, 2-letter ISO code, 1px border, country name beside it
+- Stock: YES in muted green, NO with strikethrough in muted color
+- Price format: always "SAR X.XX"
+
+LAYOUT RULES:
+- Max content width: 900px centered
+- Row height: minimum 100px
+- Column grid: 90px | 1fr | 140px | 80px | 130px
+- Sticky: filter bar only
+- Spacing: multiples of 8px
+
+INTERACTION:
+- Row hover: background shifts to #eae9e2
+- Filter changes: 200ms stagger fade-in on rows
+- Active filters: filled green background #20322a, cream text #fbfbf8
+
+CODE QUALITY:
+- TypeScript with proper interfaces, no any types
+- Tailwind for layout, CSS variables for brand colors
+- Separate reusable components: ProductRow, OriginBadge, StockIndicator, PriceDisplay
+- All Supabase calls go through /lib/supabase.ts only
+- API routes validate all inputs and return proper HTTP error codes
+---
