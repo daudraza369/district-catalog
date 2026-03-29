@@ -17,31 +17,11 @@ interface ProductRowProps {
   priority?: boolean
 }
 
-const ORIGIN_TO_FILE: Record<Origin, string> = {
-  netherlands: 'netherlands',
-  kenya: 'kenya',
-  saudi: 'saudi',
-  ethiopia: 'ethiopia',
-  colombia: 'colombia',
-  south_africa: 'other',
-  italy: 'other',
-  ecuador: 'other',
-  other: 'other'
-}
-
 function MobileOriginBadge({ origin }: { origin: Origin }) {
-  return (
-    <div className="flex items-center gap-1">
-      <Image
-        src={`/origins/${ORIGIN_TO_FILE[origin] ?? 'other'}.svg`}
-        alt={ORIGIN_LABELS[origin]}
-        width={18}
-        height={18}
-        className="opacity-60"
-      />
-      <span className="text-[7px] uppercase tracking-[0.08em] text-brand-green/50 font-mono">{ORIGIN_LABELS[origin]}</span>
-    </div>
-  )
+  const hasFile = ['netherlands', 'kenya', 'saudi', 'ethiopia', 'colombia'].includes(origin)
+  if (!hasFile) return null
+
+  return <Image src={`/origins/${origin}.svg`} alt={ORIGIN_LABELS[origin]} width={18} height={18} className="opacity-60" />
 }
 
 export default function ProductRow({ product, index, mode, onOpenDetail, priority = false }: ProductRowProps) {
@@ -86,10 +66,10 @@ export default function ProductRow({ product, index, mode, onOpenDetail, priorit
         ) : null}
       </div>
       <div className="flex h-full flex-col justify-center pl-4 pr-2 md:pl-5 md:pr-4">
-        <h3 suppressHydrationWarning className="font-display text-[16px] md:text-[18px] font-bold text-brand-green leading-tight">
+        <h3 suppressHydrationWarning className="font-display text-[16px] md:text-[18px] font-bold text-brand-green leading-tight tracking-[0.06em]">
           {product.variety}
         </h3>
-        <p className="mt-0.5 text-[10px] md:text-[11px] uppercase tracking-[0.08em] text-brand-green/50">
+        <p className="mt-0.5 font-mono text-[10px] md:text-[11px] uppercase tracking-[0.12em] text-brand-green/50">
           {product.stem_length ? `${product.name} · ${product.stem_length}` : product.name}
         </p>
         <div className="mt-1 flex items-center gap-2 md:hidden">

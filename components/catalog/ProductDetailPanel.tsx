@@ -23,6 +23,7 @@ export default function ProductDetailPanel({ product, onClose, mode }: ProductDe
   const isOpen = Boolean(product)
   const { addToCart, removeFromCart, cartItems } = useCart()
   const cartItem = product ? cartItems.find((item) => item.product_id === product.id) : null
+  const hasOriginFile = product ? ['netherlands', 'kenya', 'saudi', 'ethiopia', 'colombia'].includes(product.origin) : false
 
   return (
     <div className={`fixed inset-0 z-50 transition-opacity duration-300 ${isOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'}`}>
@@ -67,8 +68,10 @@ export default function ProductDetailPanel({ product, onClose, mode }: ProductDe
               )}
             </div>
 
-            <h3 className="font-display text-[24px] font-bold text-brand-green">{product.name}</h3>
-            <p className="mt-1 font-mono text-[12px] uppercase tracking-[0.1em] text-brand-green/55">{product.variety}</p>
+            <div>
+              <h2 className="font-display text-[24px] font-bold leading-tight text-brand-green">{product.variety}</h2>
+              <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.1em] text-brand-green/50">{product.name}</p>
+            </div>
 
             <div className="my-4 border-t border-[rgba(32,50,42,0.15)]" />
 
@@ -77,7 +80,15 @@ export default function ProductDetailPanel({ product, onClose, mode }: ProductDe
                 label="Arrival"
                 value={product.arrival_date ? new Date(product.arrival_date).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : '—'}
               />
-              <DetailRow label="Origin" value={ORIGIN_LABELS[product.origin]} />
+              <div className="col-span-2">
+                <p className="text-[10px] uppercase tracking-[0.1em] text-brand-green/50">Origin</p>
+                <div className="mt-1 flex items-center gap-2">
+                  {hasOriginFile ? (
+                    <Image src={`/origins/${product.origin}.svg`} alt={ORIGIN_LABELS[product.origin]} width={28} height={28} className="opacity-75" />
+                  ) : null}
+                  <span className="font-mono text-[12px] text-brand-green">{ORIGIN_LABELS[product.origin]}</span>
+                </div>
+              </div>
               {product.stem_length ? <DetailRow label="Stem Length" value={product.stem_length} /> : null}
               <DetailRow
                 label={mode === 'b2b' ? 'Price Per Stem' : 'Price Per Bunch'}

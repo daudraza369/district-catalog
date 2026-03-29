@@ -16,8 +16,6 @@ interface FilterBarProps {
   totalCount: number
   filteredCount: number
   mode: 'b2b' | 'b2c'
-  isB2B: boolean
-  onExportPDF: () => void
 }
 
 export default function FilterBar({
@@ -33,9 +31,7 @@ export default function FilterBar({
   flowerTypes,
   totalCount,
   filteredCount,
-  mode,
-  isB2B,
-  onExportPDF
+  mode
 }: FilterBarProps) {
   return (
     <section data-mode={mode} className="sticky top-0 z-40 border-b border-[rgba(32,50,42,0.12)] bg-brand-bg/90 px-4 py-4 backdrop-blur-md">
@@ -56,37 +52,37 @@ export default function FilterBar({
         />
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        <label htmlFor="catalog-origin" className="sr-only">
-          Filter by origin
-        </label>
-        <select
-          id="catalog-origin"
-          value={origin}
-          onChange={(event) => onOriginChange(event.target.value || '')}
-          className="h-9 flex-1 min-w-0 border border-brand-border bg-brand-bg px-3 text-[11px] uppercase tracking-[0.1em] text-brand-green outline-none focus-brand"
-        >
-          <option value="">ALL ORIGINS</option>
-          {origins.map((originOption) => (
-            <option key={originOption} value={originOption}>
-              {ORIGIN_LABELS[originOption]}
-            </option>
-          ))}
-        </select>
-
+      <div className="mt-2 grid grid-cols-2 gap-2 md:flex md:gap-3">
         <label htmlFor="catalog-flower-type" className="sr-only">
           Filter by flower type
         </label>
         <select
           id="catalog-flower-type"
           value={flowerType}
-          onChange={(event) => onFlowerTypeChange(event.target.value || '')}
-          className="h-9 flex-1 min-w-0 border border-brand-border bg-brand-bg px-3 text-[11px] uppercase tracking-[0.1em] text-brand-green outline-none focus-brand"
+          onChange={(event) => onFlowerTypeChange(event.target.value)}
+          className="col-span-1 h-9 border border-brand-green/20 bg-[#f4f3ee] px-2 font-mono text-[10px] uppercase tracking-[0.08em] text-brand-green/70 outline-none cursor-pointer truncate"
         >
-          <option value="">ALL FLOWERS</option>
+          <option value="">All Flowers</option>
           {flowerTypes.map((flowerType) => (
             <option key={flowerType} value={flowerType}>
               {flowerType}
+            </option>
+          ))}
+        </select>
+
+        <label htmlFor="catalog-origin" className="sr-only">
+          Filter by origin
+        </label>
+        <select
+          id="catalog-origin"
+          value={origin}
+          onChange={(event) => onOriginChange(event.target.value)}
+          className="col-span-1 h-9 border border-brand-green/20 bg-[#f4f3ee] px-2 font-mono text-[10px] uppercase tracking-[0.08em] text-brand-green/70 outline-none cursor-pointer"
+        >
+          <option value="">All Origins</option>
+          {origins.map((originOption) => (
+            <option key={originOption} value={originOption}>
+              {ORIGIN_LABELS[originOption]}
             </option>
           ))}
         </select>
@@ -95,28 +91,21 @@ export default function FilterBar({
           type="button"
           onClick={onStockToggle}
           aria-label="Toggle in-stock products only"
-          className={`h-9 flex-1 min-w-0 border px-4 text-[11px] uppercase tracking-[0.1em] transition-colors ${
+          className={`col-span-2 md:col-span-1 h-9 flex items-center justify-center gap-2 border px-3 font-mono text-[10px] uppercase tracking-[0.1em] transition-colors ${
             stockOnly
-              ? 'border-brand-green bg-brand-green text-brand-bg'
-              : 'border-brand-border bg-brand-bg text-brand-green/65 hover:border-brand-border-strong'
+              ? 'bg-brand-green text-[#fbfbf8] border-brand-green'
+              : 'border-brand-green/20 text-brand-green/60 hover:border-brand-green/40'
           }`}
         >
-          <span className="mr-2 inline-block text-[10px]">●</span>IN STOCK ONLY
+          <span className={`h-1.5 w-1.5 rounded-full ${stockOnly ? 'bg-[#fbfbf8]' : 'bg-brand-green/40'}`} />
+          In Stock Only
         </button>
 
-        {isB2B ? (
-          <button
-            type="button"
-            onClick={onExportPDF}
-            className="h-9 border border-brand-green px-4 text-[10px] uppercase tracking-[0.1em] text-brand-green"
-          >
-            EXPORT PDF
-          </button>
-        ) : null}
-
-        <span className="w-full text-right text-[10px] uppercase tracking-[0.1em] text-brand-green/55">
-          {filteredCount} OF {totalCount} PRODUCTS
-        </span>
+        <div className="col-span-2 flex items-center justify-end">
+          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-brand-green/40">
+            {filteredCount} of {totalCount} products
+          </span>
+        </div>
       </div>
     </section>
   )

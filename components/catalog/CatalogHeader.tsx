@@ -1,54 +1,59 @@
 'use client'
 
 import Image from 'next/image'
-import logo from '../../logo.svg'
+import b2bIcon from '@/Icons/B2b.svg'
+import exportIcon from '@/Icons/Export.svg'
 
 interface CatalogHeaderProps {
-  inventoryLive: boolean
   mode: 'b2b' | 'b2c'
-  onB2BModeClick: () => void
+  onB2BLogout: () => void
+  onB2BAccess: () => void
+  onExportPDF: () => void
 }
 
-export default function CatalogHeader({ inventoryLive, mode, onB2BModeClick }: CatalogHeaderProps) {
+export function CatalogHeader({ mode, onB2BLogout, onB2BAccess, onExportPDF }: CatalogHeaderProps) {
   return (
-    <header className="border-b border-brand-border-strong px-4 pt-8">
-      <div className="flex items-center gap-3 border-b border-brand-border-strong pb-5 sm:gap-6">
-        <div className="flex items-center flex-shrink-0">
-          <Image
-            src={logo}
-            alt="District Flowers logo"
-            width={64}
-            height={64}
-            className="h-11 w-auto object-contain md:h-14"
-            priority
-          />
+    <div className="flex items-center justify-between border-b border-brand-green/10 px-4 py-3 md:px-6">
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-green-500" />
+          <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-brand-green/55">Inventory Live</span>
         </div>
-
-        <div className="flex-1 min-w-0 px-1 text-right sm:px-0">
-          <div className="overflow-hidden">
-            <h1 className="font-display font-bold uppercase text-brand-green leading-none tracking-[0.1em] text-[18px] sm:text-[24px] md:text-[34px] lg:text-[42px] whitespace-nowrap overflow-hidden text-ellipsis">
-              Wholesale Flowers
-            </h1>
-          </div>
-        </div>
+        {mode === 'b2b' ? (
+          <button
+            type="button"
+            onClick={onB2BLogout}
+            className="flex items-center gap-1 border border-brand-green/20 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.1em] text-brand-green/50 transition-colors hover:text-brand-green/80"
+          >
+            ● B2B · PER STEM <span aria-hidden>✕</span>
+          </button>
+        ) : null}
       </div>
 
-      <div className="py-4 text-[11px] uppercase tracking-[0.12em] text-brand-green/65">
-        <p className="flex flex-wrap items-center gap-2">
-          <span className={inventoryLive ? 'text-green-500' : 'text-amber-500'}>●</span>INVENTORY LIVE
-          {mode === 'b2b' ? (
-            <button
-              type="button"
-              onClick={onB2BModeClick}
-              className="inline-flex items-center gap-1 rounded-full border border-brand-green/20 px-2 py-0.5 font-mono text-[8px] uppercase tracking-[0.1em] text-brand-green/60"
-            >
-              <span className="text-green-500">●</span>B2B MODE — PER STEM
-            </button>
-          ) : null}
-        </p>
+      <div className="flex items-center gap-4">
+        <button
+          type="button"
+          onClick={onExportPDF}
+          title="Export PDF"
+          className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-[0.12em] text-brand-green/50 transition-colors hover:text-brand-green"
+        >
+          <Image src={exportIcon} alt="" width={15} height={15} aria-hidden className="opacity-80" />
+          <span className="hidden sm:inline">Export PDF</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={onB2BAccess}
+          title="B2B Wholesale Access"
+          className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-[0.12em] text-brand-green/50 transition-colors hover:text-brand-green"
+        >
+          <Image src={b2bIcon} alt="" width={15} height={15} aria-hidden className="opacity-80" />
+          <span className="hidden sm:inline">B2B Access</span>
+        </button>
       </div>
-    </header>
+    </div>
   )
 }
 
 CatalogHeader.displayName = 'CatalogHeader'
+export default CatalogHeader

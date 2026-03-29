@@ -44,10 +44,7 @@ async function CatalogContent() {
   return (
     <>
       <CartProvider>
-        <CatalogClient
-          shipment={catalog.shipment}
-          allProducts={catalog.products}
-        />
+        <CatalogClient allProducts={catalog.products} />
       </CartProvider>
     </>
   )

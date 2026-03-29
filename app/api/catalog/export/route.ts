@@ -30,6 +30,7 @@ function getProduct(row: ExportRow) {
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
+  const mode = searchParams.get('mode') ?? 'b2c'
   const origin = searchParams.get('origin') ?? ''
   const flowerType = searchParams.get('flower_type') ?? ''
   const stock = searchParams.get('stock')
@@ -112,7 +113,7 @@ export async function GET(request: NextRequest) {
       <img src="/7.svg" width="42" height="42" />
       <div class="meta">${activeShipment ? `Arrival: ${activeShipment.arrival_date}` : ''}</div>
     </div>
-    <h1>Wholesale Pricelist</h1>
+      <h1>Wholesale Pricelist</h1>
     <div class="meta">${filterLabel || 'All Products'}</div>
     <table>
       <thead>
@@ -121,7 +122,7 @@ export async function GET(request: NextRequest) {
           <th>Flower Type</th>
           <th>Origin</th>
           <th>Stock</th>
-          <th class="price">Price Per Stem</th>
+          <th class="price">${mode === 'b2b' ? 'Price Per Stem' : 'Price Per Bunch'}</th>
         </tr>
       </thead>
       <tbody>
@@ -133,7 +134,7 @@ export async function GET(request: NextRequest) {
             <td>${row.stem_length ? `${row.name} · ${row.stem_length}` : row.name}</td>
             <td>${ORIGIN_LABELS[row.origin]}</td>
             <td>${row.stock ? 'YES' : 'NO'}</td>
-            <td class="price">SAR ${Number(row.price).toFixed(2)}</td>
+            <td class="price">SAR ${Number(mode === 'b2b' ? row.price : row.price * 10).toFixed(2)}</td>
           </tr>
         `
           )

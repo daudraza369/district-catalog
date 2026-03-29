@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
 import CatalogHeader from '@/components/catalog/CatalogHeader'
 import FilterBar from '@/components/catalog/FilterBar'
 import ProductRow from '@/components/catalog/ProductRow'
@@ -10,16 +9,15 @@ import AddToCartToast from '@/components/catalog/AddToCartToast'
 import CartBar from '@/components/catalog/CartBar'
 import { CATALOG_HEADER_COLS } from '@/components/catalog/constants'
 import { useCart } from '@/components/catalog/CartContext'
-import { ORIGIN_LABELS, type CatalogProduct, type Origin, type Shipment } from '@/lib/types'
+import { ORIGIN_LABELS, type CatalogProduct, type Origin } from '@/lib/types'
 
 interface CatalogClientProps {
-  shipment: Shipment | null
   allProducts: CatalogProduct[]
 }
 
 const ORIGINS = Object.keys(ORIGIN_LABELS) as Origin[]
 
-export default function CatalogClient({ shipment, allProducts }: CatalogClientProps) {
+export default function CatalogClient({ allProducts }: CatalogClientProps) {
   const [selectedProduct, setSelectedProduct] = useState<CatalogProduct | null>(null)
   const [mode, setMode] = useState<'b2b' | 'b2c'>(() =>
     typeof window !== 'undefined' && sessionStorage.getItem('b2b_authenticated') === 'true' ? 'b2b' : 'b2c'
@@ -62,6 +60,7 @@ export default function CatalogClient({ shipment, allProducts }: CatalogClientPr
 
   const handleExportPDF = () => {
     const params = new URLSearchParams()
+    params.set('mode', mode)
     if (origin) params.set('origin', origin)
     if (flowerType) params.set('flower_type', flowerType)
     if (stockOnly) params.set('stock', 'true')
@@ -72,12 +71,15 @@ export default function CatalogClient({ shipment, allProducts }: CatalogClientPr
   return (
     <>
       <CatalogHeader
-        inventoryLive={Boolean(shipment)}
         mode={mode}
-        onB2BModeClick={() => {
+        onB2BLogout={() => {
           sessionStorage.removeItem('b2b_authenticated')
-          window.location.reload()
+          setMode('b2c')
         }}
+        onB2BAccess={() => {
+          window.location.href = '/b2b'
+        }}
+        onExportPDF={handleExportPDF}
       />
       <FilterBar
         search={search}
@@ -93,15 +95,13 @@ export default function CatalogClient({ shipment, allProducts }: CatalogClientPr
         totalCount={allProducts.length}
         filteredCount={filteredProducts.length}
         mode={mode}
-        isB2B={mode === 'b2b'}
-        onExportPDF={handleExportPDF}
       />
       <div className={`${CATALOG_HEADER_COLS} grid items-end border-b border-brand-green/10 bg-[#f4f3ee] px-0 py-2.5`}>
         <div className="w-full" />
-        <p className="pl-4 md:pl-0 text-[9px] uppercase tracking-[0.12em] text-brand-green/50">Variety / Flower Type</p>
-        <p className="hidden md:block text-center text-[9px] uppercase tracking-[0.12em] text-brand-green/50">Origin</p>
-        <p className="hidden md:block text-center text-[9px] uppercase tracking-[0.12em] text-brand-green/50">Stock</p>
-        <p className="pr-4 md:pr-7 text-right text-[9px] uppercase tracking-[0.12em] text-brand-green/50">{mode === 'b2b' ? 'Price Per Stem' : 'Price Per Bunch'}</p>
+        <p className="pl-4 md:pl-0 text-[9px] uppercase tracking-[0.15em] text-brand-green/50">Variety / Flower Type</p>
+        <p className="hidden md:block text-center text-[9px] uppercase tracking-[0.15em] text-brand-green/50">Origin</p>
+        <p className="hidden md:block text-center text-[9px] uppercase tracking-[0.15em] text-brand-green/50">Stock</p>
+        <p className="pr-4 md:pr-7 text-right text-[9px] uppercase tracking-[0.15em] text-brand-green/50">{mode === 'b2b' ? 'Price Per Stem' : 'Price Per Bunch'}</p>
       </div>
 
       <section>
@@ -120,12 +120,6 @@ export default function CatalogClient({ shipment, allProducts }: CatalogClientPr
           <div className="px-4 py-20 text-center text-[11px] uppercase tracking-[0.12em] text-brand-green/55">No products match your filters.</div>
         )}
       </section>
-
-      <div className="px-4 py-8 text-center">
-        <Link href="/b2b" className="font-mono text-[9px] uppercase tracking-[0.08em] text-brand-green/40 hover:text-brand-green/55">
-          Wholesale access
-        </Link>
-      </div>
 
       <ProductDetailPanel product={selectedProduct} onClose={() => setSelectedProduct(null)} mode={mode} />
       <CartBar mode={mode} />
