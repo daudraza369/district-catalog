@@ -21,7 +21,7 @@ function MobileOriginBadge({ origin }: { origin: Origin }) {
   const hasFile = ['netherlands', 'kenya', 'saudi', 'ethiopia', 'colombia'].includes(origin)
   if (!hasFile) return null
 
-  return <Image src={`/origins/${origin}.svg`} alt={ORIGIN_LABELS[origin]} width={18} height={18} className="opacity-60" />
+  return <Image src={`/origins/${origin}.svg`} alt={ORIGIN_LABELS[origin]} width={30} height={30} className="opacity-60" />
 }
 
 export default function ProductRow({ product, index, mode, onOpenDetail, priority = false }: ProductRowProps) {
@@ -45,14 +45,10 @@ export default function ProductRow({ product, index, mode, onOpenDetail, priorit
         flashAdded ? 'bg-brand-green/10' : isInCart ? 'bg-brand-green/5' : index % 2 === 0 ? 'bg-brand-bg' : 'bg-brand-bg-secondary'
       } ${isInCart ? 'border-l-2 border-l-brand-green' : ''} hover:bg-[#eae9e2] active:bg-brand-green/10`}
       style={{ animation: `fadeIn 200ms ease ${index * 35}ms both` }}
-      onClick={(event) => {
-        if (window.innerWidth < 768) {
-          handleAdd(event)
-        }
-      }}
+      onClick={() => onOpenDetail?.()}
     >
       <div
-        className="relative flex h-full items-center justify-start cursor-zoom-in"
+        className="relative flex h-full items-center justify-start cursor-pointer"
         onClick={(event) => {
           event.stopPropagation()
           onOpenDetail?.()
@@ -69,7 +65,7 @@ export default function ProductRow({ product, index, mode, onOpenDetail, priorit
         <h3 suppressHydrationWarning className="font-display text-[16px] md:text-[18px] font-bold text-brand-green leading-tight tracking-[0.06em]">
           {product.variety}
         </h3>
-        <p className="mt-0.5 font-mono text-[10px] md:text-[11px] uppercase tracking-[0.12em] text-brand-green/50">
+        <p className="mt-0.5 font-mono text-[10px] md:text-[11px] font-bold uppercase tracking-[0.12em] text-brand-green/50">
           {product.stem_length ? `${product.name} · ${product.stem_length}` : product.name}
         </p>
         <div className="mt-1 flex items-center gap-2 md:hidden">

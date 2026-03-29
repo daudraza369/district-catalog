@@ -1,12 +1,17 @@
 'use client'
 
+import { useEffect, useRef, type TouchEvent } from 'react'
 import Image from 'next/image'
 import { ORIGIN_LABELS, type CatalogProduct } from '@/lib/types'
 import { useCart } from '@/components/catalog/CartContext'
+import { toTransformedImageUrl } from '@/lib/image-transform'
 
 interface ProductDetailPanelProps {
-  product: CatalogProduct | null
+  products: CatalogProduct[]
+  selectedIndex: number | null
   onClose: () => void
+  onNext: () => void
+  onPrev: () => void
   mode: 'b2b' | 'b2c'
 }
 
@@ -19,14 +24,59 @@ function DetailRow({ label, value }: { label: string; value: string }) {
   )
 }
 
-export default function ProductDetailPanel({ product, onClose, mode }: ProductDetailPanelProps) {
-  const isOpen = Boolean(product)
+export default function ProductDetailPanel({ products, selectedIndex, onClose, onNext, onPrev, mode }: ProductDetailPanelProps) {
+  const isOpen = selectedIndex !== null && selectedIndex >= 0
+  const product = selectedIndex !== null ? products[selectedIndex] ?? null : null
+  const hasPrev = selectedIndex !== null && selectedIndex > 0
+  const hasNext = selectedIndex !== null && selectedIndex < products.length - 1
   const { addToCart, removeFromCart, cartItems } = useCart()
   const cartItem = product ? cartItems.find((item) => item.product_id === product.id) : null
   const hasOriginFile = product ? ['netherlands', 'kenya', 'saudi', 'ethiopia', 'colombia'].includes(product.origin) : false
+  const detailImageSrc = toTransformedImageUrl(product?.image_url, {
+    width: 800,
+    height: 800,
+    quality: 72,
+    resize: 'cover'
+  })
+  const touchStartX = useRef<number | null>(null)
+  const touchStartY = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    const prevBodyOverflow = document.body.style.overflow
+    const prevHtmlOverflow = document.documentElement.style.overflow
+    document.body.style.overflow = 'hidden'
+    document.documentElement.style.overflow = 'hidden'
+
+    return () => {
+      document.body.style.overflow = prevBodyOverflow
+      document.documentElement.style.overflow = prevHtmlOverflow
+    }
+  }, [isOpen])
+
+  const handleTouchStart = (event: TouchEvent<HTMLElement>) => {
+    const touch = event.touches[0]
+    touchStartX.current = touch.clientX
+    touchStartY.current = touch.clientY
+  }
+
+  const handleTouchEnd = (event: TouchEvent<HTMLElement>) => {
+    if (touchStartX.current === null || touchStartY.current === null) return
+    const touch = event.changedTouches[0]
+    const deltaX = touch.clientX - touchStartX.current
+    const deltaY = touch.clientY - touchStartY.current
+    touchStartX.current = null
+    touchStartY.current = null
+
+    // Prioritize intentional horizontal swipes like a gallery.
+    if (Math.abs(deltaX) < 40 || Math.abs(deltaX) < Math.abs(deltaY)) return
+    if (deltaX < 0) onNext()
+    if (deltaX > 0) onPrev()
+  }
 
   return (
-    <div className={`fixed inset-0 z-50 transition-opacity duration-300 ${isOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'}`}>
+    <div className={`fixed inset-0 z-50 overscroll-contain transition-opacity duration-300 ${isOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'}`}>
       <button
         type="button"
         aria-label="Close product details"
@@ -35,6 +85,8 @@ export default function ProductDetailPanel({ product, onClose, mode }: ProductDe
       />
 
       <aside
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
         className={`absolute bottom-0 left-0 right-0 w-full h-[70vh] border border-[rgba(32,50,42,0.15)] bg-[#fbfbf8] p-4 transition-transform duration-300 ease-in-out md:bottom-0 md:left-auto md:right-0 md:top-0 md:h-full md:w-[360px] md:p-5 ${
           isOpen ? 'translate-y-0 md:translate-y-0 md:translate-x-0' : 'translate-y-full md:translate-y-0 md:translate-x-full'
         }`}
@@ -51,10 +103,13 @@ export default function ProductDetailPanel({ product, onClose, mode }: ProductDe
               ×
             </button>
 
-            <div className="mb-4 overflow-hidden bg-[var(--brand-skeleton-base)] md:mx-auto md:h-[200px] md:w-[200px]">
+            <div
+              key={`${product.id}-${product.image_url ?? 'no-image'}`}
+              className="relative mb-4 overflow-hidden bg-[var(--brand-skeleton-base)] md:mx-auto md:h-[200px] md:w-[200px]"
+            >
               {product.image_url ? (
                 <Image
-                  src={product.image_url}
+                  src={detailImageSrc ?? product.image_url}
                   alt={`${product.name} ${product.variety}`}
                   width={600}
                   height={600}
@@ -66,11 +121,33 @@ export default function ProductDetailPanel({ product, onClose, mode }: ProductDe
                   <span className="text-[11px] uppercase tracking-[0.1em] text-brand-green/40">No Image</span>
                 </div>
               )}
+
+              {hasPrev ? (
+                <button
+                  type="button"
+                  aria-label="Previous flower"
+                  onClick={onPrev}
+                  className="absolute left-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-sm border border-brand-green/25 bg-[#fbfbf8]/35 text-brand-green/65 backdrop-blur-sm transition-colors hover:bg-[#fbfbf8]/50 hover:text-brand-green"
+                >
+                  <span className="text-[13px] leading-none">‹</span>
+                </button>
+              ) : null}
+
+              {hasNext ? (
+                <button
+                  type="button"
+                  aria-label="Next flower"
+                  onClick={onNext}
+                  className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-sm border border-brand-green/25 bg-[#fbfbf8]/35 text-brand-green/65 backdrop-blur-sm transition-colors hover:bg-[#fbfbf8]/50 hover:text-brand-green"
+                >
+                  <span className="text-[13px] leading-none">›</span>
+                </button>
+              ) : null}
             </div>
 
             <div>
               <h2 className="font-display text-[24px] font-bold leading-tight text-brand-green">{product.variety}</h2>
-              <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.1em] text-brand-green/50">{product.name}</p>
+              <p className="mt-1 font-mono text-[11px] font-bold uppercase tracking-[0.1em] text-brand-green/50">{product.name}</p>
             </div>
 
             <div className="my-4 border-t border-[rgba(32,50,42,0.15)]" />
@@ -84,7 +161,7 @@ export default function ProductDetailPanel({ product, onClose, mode }: ProductDe
                 <p className="text-[10px] uppercase tracking-[0.1em] text-brand-green/50">Origin</p>
                 <div className="mt-1 flex items-center gap-2">
                   {hasOriginFile ? (
-                    <Image src={`/origins/${product.origin}.svg`} alt={ORIGIN_LABELS[product.origin]} width={28} height={28} className="opacity-75" />
+                    <Image src={`/origins/${product.origin}.svg`} alt={ORIGIN_LABELS[product.origin]} width={32} height={32} className="opacity-75" />
                   ) : null}
                   <span className="font-mono text-[12px] text-brand-green">{ORIGIN_LABELS[product.origin]}</span>
                 </div>

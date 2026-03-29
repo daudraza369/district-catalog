@@ -13,7 +13,7 @@ interface CatalogHeaderProps {
 
 export function CatalogHeader({ mode, onB2BLogout, onB2BAccess, onExportPDF }: CatalogHeaderProps) {
   return (
-    <div className="flex items-center justify-between border-b border-brand-green/10 px-4 py-3 md:px-6">
+    <div className="mt-2 flex items-center justify-between border-y border-brand-green/10 px-4 py-3 md:px-6">
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
           <span className="h-2 w-2 rounded-full bg-green-500" />
@@ -33,22 +33,22 @@ export function CatalogHeader({ mode, onB2BLogout, onB2BAccess, onExportPDF }: C
       <div className="flex items-center gap-4">
         <button
           type="button"
-          onClick={onExportPDF}
-          title="Export PDF"
+          onClick={onB2BAccess}
+          title="B2B Wholesale Access"
+          aria-label="B2B Wholesale Access"
           className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-[0.12em] text-brand-green/50 transition-colors hover:text-brand-green"
         >
-          <Image src={exportIcon} alt="" width={15} height={15} aria-hidden className="opacity-80" />
-          <span className="hidden sm:inline">Export PDF</span>
+          <Image src={b2bIcon} alt="" width={15} height={15} aria-hidden className="opacity-80" />
         </button>
 
         <button
           type="button"
-          onClick={onB2BAccess}
-          title="B2B Wholesale Access"
+          onClick={onExportPDF}
+          title="Export PDF"
+          aria-label="Export PDF"
           className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-[0.12em] text-brand-green/50 transition-colors hover:text-brand-green"
         >
-          <Image src={b2bIcon} alt="" width={15} height={15} aria-hidden className="opacity-80" />
-          <span className="hidden sm:inline">B2B Access</span>
+          <Image src={exportIcon} alt="" width={15} height={15} aria-hidden className="opacity-80" />
         </button>
       </div>
     </div>

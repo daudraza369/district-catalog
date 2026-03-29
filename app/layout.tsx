@@ -16,7 +16,12 @@ const ppFragment = localFont({
 
 export const metadata: Metadata = {
   title: 'District Flowers — Wholesale Catalog',
-  description: 'Premium B2B wholesale catalog for District Flowers in Riyadh'
+  description: 'Premium B2B wholesale catalog for District Flowers in Riyadh',
+  icons: {
+    icon: '/logo.svg',
+    shortcut: '/logo.svg',
+    apple: '/logo.svg'
+  }
 }
 
 export default function RootLayout({

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase'
 import { ORIGIN_LABELS, type Origin } from '@/lib/types'
+import { getFlowerImagePath } from '@/lib/flower-images'
 
 type ExportRow = {
   id: string
@@ -13,12 +14,14 @@ type ExportRow = {
         variety: string
         stem_length: string | null
         origin: Origin
+        image_url: string | null
       }
     | Array<{
         name: string
         variety: string
         stem_length: string | null
         origin: Origin
+        image_url: string | null
       }>
     | null
 }
@@ -59,7 +62,8 @@ export async function GET(request: NextRequest) {
         name,
         variety,
         stem_length,
-        origin
+        origin,
+        image_url
       )
     `
     )
@@ -75,6 +79,7 @@ export async function GET(request: NextRequest) {
       variety: item.product!.variety,
       stem_length: item.product!.stem_length,
       origin: item.product!.origin,
+      image_url: item.product!.image_url ?? getFlowerImagePath(item.product!.name, item.product!.variety),
       price: item.row.price,
       stock: item.row.stock
     }))
@@ -91,17 +96,96 @@ export async function GET(request: NextRequest) {
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Wholesale Pricelist Export</title>
+    <title>District Catalog Export</title>
     <style>
-      body { font-family: 'PP Fragment', Arial, sans-serif; color: #20322a; margin: 24px; }
-      h1 { font-family: 'PP Fragment', Arial, sans-serif; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; text-align: center; margin: 8px 0 16px; }
-      .top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-      .meta { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: rgba(32,50,42,0.7); }
-      table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-      th, td { border-bottom: 1px solid rgba(32,50,42,0.2); padding: 8px 6px; font-size: 11px; text-transform: uppercase; }
-      th { color: rgba(32,50,42,0.6); text-align: left; }
-      .price { text-align: right; }
-      .print-btn { position: fixed; top: 12px; right: 12px; border: 1px solid #20322a; background: white; padding: 8px 10px; font-size: 11px; text-transform: uppercase; }
+      :root {
+        --brand-green: #20322a;
+        --brand-muted: rgba(32,50,42,0.55);
+        --brand-border: rgba(32,50,42,0.2);
+        --brand-bg: #fbfbf8;
+      }
+      body {
+        font-family: 'PP Fragment', Arial, sans-serif;
+        color: var(--brand-green);
+        background: var(--brand-bg);
+        margin: 20px;
+      }
+      .top {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--brand-border);
+        padding-bottom: 10px;
+        margin-bottom: 12px;
+      }
+      .meta {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.13em;
+        color: var(--brand-muted);
+        text-align: right;
+      }
+      .meta strong {
+        color: var(--brand-green);
+        font-weight: 700;
+        letter-spacing: 0.15em;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+      }
+      col.image-col { width: 64px; }
+      col.variety-col { width: 26%; }
+      col.type-col { width: 30%; }
+      col.origin-col { width: 16%; }
+      col.stock-col { width: 10%; }
+      col.price-col { width: 18%; }
+      th, td {
+        border-bottom: 1px solid var(--brand-border);
+        padding: 8px 6px;
+      }
+      th {
+        font-size: 9px;
+        text-transform: uppercase;
+        letter-spacing: 0.15em;
+        color: var(--brand-muted);
+        text-align: left;
+      }
+      td {
+        font-size: 11px;
+        letter-spacing: 0.03em;
+        vertical-align: middle;
+      }
+      .image-cell {
+        width: 52px;
+        height: 52px;
+        overflow: hidden;
+        background: #f1f1ec;
+      }
+      .image-cell img {
+        width: 52px;
+        height: 52px;
+        object-fit: cover;
+        display: block;
+      }
+      .stock { text-transform: uppercase; letter-spacing: 0.1em; font-size: 10px; color: var(--brand-muted); }
+      .price { text-align: right; font-weight: 600; letter-spacing: 0.08em; }
+      .price-head { text-align: right; }
+      .print-btn {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        border: 1px solid var(--brand-green);
+        background: white;
+        padding: 8px 10px;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+      }
       @media print {
         .print-btn { display: none; }
       }
@@ -110,19 +194,29 @@ export async function GET(request: NextRequest) {
   <body>
     <button class="print-btn" onclick="window.print()">Print / Save PDF</button>
     <div class="top">
-      <img src="/7.svg" width="42" height="42" />
-      <div class="meta">${activeShipment ? `Arrival: ${activeShipment.arrival_date}` : ''}</div>
+      <img src="/7.svg" width="88" height="88" />
+      <div class="meta">
+        <span>${activeShipment ? `Arrival: ${activeShipment.arrival_date}` : ''}</span>
+        <strong>${filterLabel || 'All Products'}</strong>
+      </div>
     </div>
-      <h1>Wholesale Pricelist</h1>
-    <div class="meta">${filterLabel || 'All Products'}</div>
     <table>
+      <colgroup>
+        <col class="image-col" />
+        <col class="variety-col" />
+        <col class="type-col" />
+        <col class="origin-col" />
+        <col class="stock-col" />
+        <col class="price-col" />
+      </colgroup>
       <thead>
         <tr>
+          <th>Image</th>
           <th>Variety</th>
           <th>Flower Type</th>
           <th>Origin</th>
           <th>Stock</th>
-          <th class="price">${mode === 'b2b' ? 'Price Per Stem' : 'Price Per Bunch'}</th>
+          <th class="price-head">${mode === 'b2b' ? 'Price Per Stem' : 'Price Per Bunch'}</th>
         </tr>
       </thead>
       <tbody>
@@ -130,10 +224,15 @@ export async function GET(request: NextRequest) {
           .map(
             (row) => `
           <tr>
+            <td>
+              <div class="image-cell">
+                ${row.image_url ? `<img src="${row.image_url}" alt="${row.name} ${row.variety}" />` : ''}
+              </div>
+            </td>
             <td>${row.variety}</td>
             <td>${row.stem_length ? `${row.name} · ${row.stem_length}` : row.name}</td>
             <td>${ORIGIN_LABELS[row.origin]}</td>
-            <td>${row.stock ? 'YES' : 'NO'}</td>
+            <td class="stock">${row.stock ? 'YES' : 'NO'}</td>
             <td class="price">SAR ${Number(mode === 'b2b' ? row.price : row.price * 10).toFixed(2)}</td>
           </tr>
         `

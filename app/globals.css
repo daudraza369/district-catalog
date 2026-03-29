@@ -21,6 +21,17 @@ body {
   font-family: var(--font-pp-fragment), sans-serif;
 }
 
+/* Global uppercase tracking across all pages/views */
+.uppercase {
+  letter-spacing: 0.17em !important;
+}
+
+/* Native select controls can ignore inherited tracking on some mobile browsers. */
+select.uppercase,
+select.uppercase option {
+  letter-spacing: 0.17em;
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;

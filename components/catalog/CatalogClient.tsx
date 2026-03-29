@@ -18,7 +18,7 @@ interface CatalogClientProps {
 const ORIGINS = Object.keys(ORIGIN_LABELS) as Origin[]
 
 export default function CatalogClient({ allProducts }: CatalogClientProps) {
-  const [selectedProduct, setSelectedProduct] = useState<CatalogProduct | null>(null)
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const [mode, setMode] = useState<'b2b' | 'b2c'>(() =>
     typeof window !== 'undefined' && sessionStorage.getItem('b2b_authenticated') === 'true' ? 'b2b' : 'b2c'
   )
@@ -68,6 +68,13 @@ export default function CatalogClient({ allProducts }: CatalogClientProps) {
     window.open(`/api/catalog/export?${params.toString()}`, '_blank')
   }
 
+  useEffect(() => {
+    if (selectedIndex === null) return
+    if (filteredProducts.length === 0 || selectedIndex > filteredProducts.length - 1) {
+      setSelectedIndex(null)
+    }
+  }, [filteredProducts, selectedIndex])
+
   return (
     <>
       <CatalogHeader
@@ -97,11 +104,13 @@ export default function CatalogClient({ allProducts }: CatalogClientProps) {
         mode={mode}
       />
       <div className={`${CATALOG_HEADER_COLS} grid items-end border-b border-brand-green/10 bg-[#f4f3ee] px-0 py-2.5`}>
-        <div className="w-full" />
-        <p className="pl-4 md:pl-0 text-[9px] uppercase tracking-[0.15em] text-brand-green/50">Variety / Flower Type</p>
+        <p className="col-span-2 pl-4 text-[9px] uppercase tracking-[0.15em] text-brand-green/50">Variety / Flower Type</p>
         <p className="hidden md:block text-center text-[9px] uppercase tracking-[0.15em] text-brand-green/50">Origin</p>
         <p className="hidden md:block text-center text-[9px] uppercase tracking-[0.15em] text-brand-green/50">Stock</p>
-        <p className="pr-4 md:pr-7 text-right text-[9px] uppercase tracking-[0.15em] text-brand-green/50">{mode === 'b2b' ? 'Price Per Stem' : 'Price Per Bunch'}</p>
+        <p className="pr-3 text-right font-mono text-[8px] tracking-[0.08em] text-brand-green/55 md:pr-7 md:text-[9px] md:uppercase md:tracking-[0.15em] md:text-brand-green/50">
+          <span className="whitespace-nowrap md:hidden">{mode === 'b2b' ? 'PRICE/STEM' : 'PRICE/BUNCH'}</span>
+          <span className="hidden md:inline">{mode === 'b2b' ? 'Price Per Stem' : 'Price Per Bunch'}</span>
+        </p>
       </div>
 
       <section>
@@ -113,7 +122,7 @@ export default function CatalogClient({ allProducts }: CatalogClientProps) {
               mode={mode}
               index={index}
               priority={index < 6}
-              onOpenDetail={() => setSelectedProduct(product)}
+              onOpenDetail={() => setSelectedIndex(index)}
             />
           ))
         ) : (
@@ -121,7 +130,14 @@ export default function CatalogClient({ allProducts }: CatalogClientProps) {
         )}
       </section>
 
-      <ProductDetailPanel product={selectedProduct} onClose={() => setSelectedProduct(null)} mode={mode} />
+      <ProductDetailPanel
+        products={filteredProducts}
+        selectedIndex={selectedIndex}
+        onClose={() => setSelectedIndex(null)}
+        onNext={() => setSelectedIndex((prev) => (prev === null ? null : Math.min(prev + 1, filteredProducts.length - 1)))}
+        onPrev={() => setSelectedIndex((prev) => (prev === null ? null : Math.max(prev - 1, 0)))}
+        mode={mode}
+      />
       <CartBar mode={mode} />
 
       {toasts.map((toast) => (

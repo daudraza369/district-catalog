@@ -1,9 +1,8 @@
 import { headers } from 'next/headers'
 import { Suspense } from 'react'
-import CatalogClient from '@/components/catalog/CatalogClient'
+import CatalogAppClient from '@/components/catalog/CatalogAppClient'
 import CatalogSkeleton from '@/components/catalog/CatalogSkeleton'
 import ErrorState from '@/components/catalog/ErrorState'
-import { CartProvider } from '@/components/catalog/CartContext'
 import { type CatalogProduct, type Shipment } from '@/lib/types'
 
 interface CatalogResponse {
@@ -43,16 +42,14 @@ async function CatalogContent() {
 
   return (
     <>
-      <CartProvider>
-        <CatalogClient allProducts={catalog.products} />
-      </CartProvider>
+      <CatalogAppClient products={catalog.products} />
     </>
   )
 }
 
 export default function HomePage() {
   return (
-    <main className="mx-auto min-h-screen w-full max-w-[900px] border-t border-brand-border bg-brand-bg pb-10">
+    <main data-catalog-root className="mx-auto min-h-screen w-full max-w-[900px] border-t border-brand-border bg-brand-bg pb-10">
       <Suspense fallback={<CatalogSkeleton />}>
         <CatalogContent />
       </Suspense>

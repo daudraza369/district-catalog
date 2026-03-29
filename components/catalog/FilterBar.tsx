@@ -60,9 +60,9 @@ export default function FilterBar({
           id="catalog-flower-type"
           value={flowerType}
           onChange={(event) => onFlowerTypeChange(event.target.value)}
-          className="col-span-1 h-9 border border-brand-green/20 bg-[#f4f3ee] px-2 font-mono text-[10px] uppercase tracking-[0.08em] text-brand-green/70 outline-none cursor-pointer truncate"
+          className="col-span-1 h-9 border border-brand-green/20 bg-[#f4f3ee] px-2 font-mono text-[10px] uppercase tracking-[0.15em] text-brand-green/70 outline-none cursor-pointer truncate"
         >
-          <option value="">All Flowers</option>
+          <option value="">ALL FLOWERS</option>
           {flowerTypes.map((flowerType) => (
             <option key={flowerType} value={flowerType}>
               {flowerType}
@@ -77,9 +77,9 @@ export default function FilterBar({
           id="catalog-origin"
           value={origin}
           onChange={(event) => onOriginChange(event.target.value)}
-          className="col-span-1 h-9 border border-brand-green/20 bg-[#f4f3ee] px-2 font-mono text-[10px] uppercase tracking-[0.08em] text-brand-green/70 outline-none cursor-pointer"
+          className="col-span-1 h-9 border border-brand-green/20 bg-[#f4f3ee] px-2 font-mono text-[10px] uppercase tracking-[0.15em] text-brand-green/70 outline-none cursor-pointer"
         >
-          <option value="">All Origins</option>
+          <option value="">ALL ORIGINS</option>
           {origins.map((originOption) => (
             <option key={originOption} value={originOption}>
               {ORIGIN_LABELS[originOption]}
@@ -102,8 +102,9 @@ export default function FilterBar({
         </button>
 
         <div className="col-span-2 flex items-center justify-end">
-          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-brand-green/40">
-            {filteredCount} of {totalCount} products
+          <span className="font-mono text-[10px] tracking-[0.08em] text-brand-green/45 md:uppercase md:tracking-[0.1em] md:text-brand-green/40">
+            <span className="md:hidden">Showing {filteredCount}/{totalCount}</span>
+            <span className="hidden md:inline">{filteredCount} of {totalCount} products</span>
           </span>
         </div>
       </div>
