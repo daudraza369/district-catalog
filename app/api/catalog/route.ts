@@ -8,7 +8,7 @@ import { CATALOG_CACHE_TTL_MS, catalogCache, getCatalogCacheKey } from '@/lib/ca
 type QueryRow = {
   id: string
   price: number
-  price_b2c: number | null
+  price_b2c?: number | null
   stock: boolean
   units_per_box: number | null
   units_per_bunch: number | null
@@ -22,8 +22,8 @@ type QueryRow = {
         origin: Origin
         image_url: string | null
         active: boolean
-        show_b2b: boolean
-        show_b2c: boolean
+        show_b2b?: boolean
+        show_b2c?: boolean
       }
     | Array<{
         id: string
@@ -34,8 +34,8 @@ type QueryRow = {
         origin: Origin
         image_url: string | null
         active: boolean
-        show_b2b: boolean
-        show_b2c: boolean
+        show_b2b?: boolean
+        show_b2c?: boolean
       }>
     | null
   shipments: Shipment[] | Shipment | null
@@ -50,8 +50,8 @@ type RowProduct = {
   origin: Origin
   image_url: string | null
   active: boolean
-  show_b2b: boolean
-  show_b2c: boolean
+  show_b2b?: boolean
+  show_b2c?: boolean
 }
 
 function getProductValue(row: QueryRow): RowProduct | null {
@@ -95,9 +95,10 @@ export async function GET(request: NextRequest) {
     const flowerType = searchParams.get('flower_type')?.trim() ?? ''
     const search = searchParams.get('search')?.trim().toLowerCase() ?? ''
 
-    let query = supabase
-      .from('shipment_products')
-      .select(`
+    const runCatalogQuery = async (withVisibilityColumns: boolean) => {
+      const query = supabase
+        .from('shipment_products')
+        .select(withVisibilityColumns ? `
         id,
         price,
         price_b2c,
@@ -124,19 +125,53 @@ export async function GET(request: NextRequest) {
           is_active,
           created_at
         )
+      ` : `
+        id,
+        price,
+        stock,
+        units_per_box,
+        units_per_bunch,
+        products (
+          id,
+          name,
+          variety,
+          stem_length,
+          color,
+          origin,
+          image_url,
+          active
+        ),
+        shipments!inner (
+          id,
+          batch_id,
+          arrival_date,
+          price_unit,
+          is_active,
+          created_at
+        )
       `)
-      .eq('products.active', true)
-      .order('name', { ascending: true, referencedTable: 'products' })
-      .order('variety', { ascending: true, referencedTable: 'products' })
+        .eq('products.active', true)
+        .order('name', { ascending: true, referencedTable: 'products' })
+        .order('variety', { ascending: true, referencedTable: 'products' })
 
-    if (shipmentId) {
-      query = query.eq('shipments.id', shipmentId)
-    } else {
-      query = query.eq('shipments.is_active', true)
+      if (shipmentId) {
+        return query.eq('shipments.id', shipmentId)
+      }
+      return query.eq('shipments.is_active', true)
     }
 
     const start = Date.now()
-    const { data, error } = await query
+    let withVisibilityColumns = true
+    let { data, error } = await runCatalogQuery(true)
+    if (
+      error &&
+      (error.message.includes('show_b2b') || error.message.includes('show_b2c') || error.message.includes('price_b2c'))
+    ) {
+      withVisibilityColumns = false
+      const fallback = await runCatalogQuery(false)
+      data = fallback.data
+      error = fallback.error
+    }
     console.log(`Supabase query took ${Date.now() - start}ms`)
     if (error) {
       return apiError(500, 'Failed to load catalog products', 'DB_QUERY_FAILED', error.message)
@@ -146,7 +181,7 @@ export async function GET(request: NextRequest) {
     for (const row of rows) {
       const product = getProductValue(row)
       if (product) {
-        visibilityByShipmentProductId.set(row.id, { show_b2b: product.show_b2b, show_b2c: product.show_b2c })
+        visibilityByShipmentProductId.set(row.id, { show_b2b: product.show_b2b ?? true, show_b2c: product.show_b2c ?? true })
       }
     }
     let shipment: Shipment | null = rows[0] ? getShipmentValue(rows[0]) : null
@@ -187,8 +222,14 @@ export async function GET(request: NextRequest) {
           origin: product.origin,
           image_url: product.image_url ?? null,
           price: Number(row.row.price),
-          price_b2c: row.row.price_b2c !== null ? Number(row.row.price_b2c) : Number(row.row.price) * 10,
-          price_per_bunch: row.row.price_b2c !== null ? Number(row.row.price_b2c) : Number(row.row.price) * 10,
+          price_b2c:
+            withVisibilityColumns && row.row.price_b2c !== undefined && row.row.price_b2c !== null
+              ? Number(row.row.price_b2c)
+              : Number(row.row.price) * 10,
+          price_per_bunch:
+            withVisibilityColumns && row.row.price_b2c !== undefined && row.row.price_b2c !== null
+              ? Number(row.row.price_b2c)
+              : Number(row.row.price) * 10,
           stock: row.row.stock,
           arrival_date: getShipmentValue(row.row)?.arrival_date ?? '',
           units_per_box: row.row.units_per_box ?? null,
