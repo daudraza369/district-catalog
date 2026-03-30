@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase'
 import { type IngestPayload, type IngestResult, type Origin } from '@/lib/types'
 import { apiError, isValidDateString, sanitizeText } from '@/lib/api'
 import { getEnv } from '@/lib/env'
+import { catalogCache } from '@/lib/catalog-cache'
 
 const ORIGINS: Origin[] = ['netherlands', 'ethiopia', 'kenya', 'saudi', 'south_africa', 'italy', 'ecuador', 'colombia', 'other']
 const RATE_LIMIT_WINDOW_MS = 60_000
@@ -74,7 +75,12 @@ function validatePayloadDetailed(payload: unknown): PayloadValidationResult {
       if (!item.variety || typeof item.variety !== 'string') errors.push(`products[${index}].variety is required`)
       if (!ORIGINS.includes(item.origin)) errors.push(`products[${index}].origin must be one of allowed values`)
       if (typeof item.price !== 'number' || Number.isNaN(item.price) || item.price < 0) errors.push(`products[${index}].price must be a non-negative number`)
+      if (item.price_b2c !== undefined && item.price_b2c !== null && (typeof item.price_b2c !== 'number' || Number.isNaN(item.price_b2c) || item.price_b2c < 0)) {
+        errors.push(`products[${index}].price_b2c must be a non-negative number or null`)
+      }
       if (typeof item.stock !== 'boolean') errors.push(`products[${index}].stock must be boolean`)
+      if (item.show_b2b !== undefined && typeof item.show_b2b !== 'boolean') errors.push(`products[${index}].show_b2b must be boolean`)
+      if (item.show_b2c !== undefined && typeof item.show_b2c !== 'boolean') errors.push(`products[${index}].show_b2c must be boolean`)
       if (item.units_per_box !== undefined && item.units_per_box !== null && (!Number.isInteger(item.units_per_box) || item.units_per_box < 0)) {
         errors.push(`products[${index}].units_per_box must be a non-negative integer or null`)
       }
@@ -116,21 +122,27 @@ export async function POST(request: NextRequest) {
 
     const { data: shipment, error: shipmentError } = await supabase
       .from('shipments')
-      .insert({
-        batch_id: payload.shipment.batch_id,
-        arrival_date: payload.shipment.arrival_date,
-        price_unit: payload.shipment.price_unit ?? 'per_stem',
-        is_active: true
-      })
       .select('*')
-      .single()
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
 
     if (shipmentError || !shipment) {
-      return apiError(500, 'Failed to create shipment', 'DB_QUERY_FAILED', shipmentError?.message)
+      return apiError(500, 'Failed to load active shipment', 'DB_QUERY_FAILED', shipmentError?.message ?? 'No active shipment')
     }
 
-    await supabase.from('shipments').update({ is_active: false }).neq('id', shipment.id)
-    await supabase.from('shipments').update({ is_active: true }).eq('id', shipment.id)
+    const { error: shipmentUpdateError } = await supabase
+      .from('shipments')
+      .update({
+        batch_id: payload.shipment.batch_id,
+        arrival_date: payload.shipment.arrival_date,
+        price_unit: payload.shipment.price_unit ?? 'per_stem'
+      })
+      .eq('id', shipment.id)
+    if (shipmentUpdateError) {
+      return apiError(500, 'Failed to update active shipment', 'DB_QUERY_FAILED', shipmentUpdateError.message)
+    }
 
     for (const item of payload.products) {
       try {
@@ -150,6 +162,8 @@ export async function POST(request: NextRequest) {
 
         let productId = existingProduct?.id as string | undefined
         let imageUrl = item.image_url ?? null
+        const showB2B = item.show_b2b ?? true
+        const showB2C = item.show_b2c ?? true
 
         if (!imageUrl) {
           const { data: imageMatch } = await supabase
@@ -175,7 +189,9 @@ export async function POST(request: NextRequest) {
               color,
               origin: item.origin,
               image_url: imageUrl,
-              active: true
+              active: true,
+              show_b2b: showB2B,
+              show_b2c: showB2C
             })
             .select('id')
             .single()
@@ -193,23 +209,50 @@ export async function POST(request: NextRequest) {
               origin: item.origin,
               image_url: imageUrl,
               stem_length: stemLength,
-              color
+              color,
+              show_b2b: showB2B,
+              show_b2c: showB2C
             })
             .eq('id', productId)
           productsUpdated += 1
         }
 
-        const { error: shipmentProductError } = await supabase.from('shipment_products').insert({
-          shipment_id: shipment.id,
-          product_id: productId,
+        const { data: existingShipmentProduct, error: existingShipmentProductError } = await supabase
+          .from('shipment_products')
+          .select('id')
+          .eq('shipment_id', shipment.id)
+          .eq('product_id', productId)
+          .maybeSingle()
+        if (existingShipmentProductError) {
+          errors.push(`Failed checking shipment row for ${productName} ${varietyName}`)
+          continue
+        }
+
+        const shipmentProductPayload = {
           price: item.price,
+          price_b2c: item.price_b2c ?? item.price * 10,
           stock: item.stock,
           units_per_box: item.units_per_box ?? null,
           units_per_bunch: item.units_per_bunch ?? null
-        })
+        }
 
-        if (shipmentProductError) {
-          errors.push(`Failed adding ${productName} to shipment`)
+        if (existingShipmentProduct) {
+          const { error: updateShipmentProductError } = await supabase
+            .from('shipment_products')
+            .update(shipmentProductPayload)
+            .eq('id', existingShipmentProduct.id)
+          if (updateShipmentProductError) {
+            errors.push(`Failed updating ${productName} in active shipment`)
+          }
+        } else {
+          const { error: createShipmentProductError } = await supabase.from('shipment_products').insert({
+            shipment_id: shipment.id,
+            product_id: productId,
+            ...shipmentProductPayload
+          })
+          if (createShipmentProductError) {
+            errors.push(`Failed adding ${productName} to active shipment`)
+          }
         }
       } catch (error) {
         errors.push(error instanceof Error ? error.message : `Unknown error for ${item.name}`)
@@ -219,12 +262,14 @@ export async function POST(request: NextRequest) {
     const result: IngestResult = {
       success: errors.length === 0,
       shipment_id: shipment.id as string,
-      batch_id: shipment.batch_id as string,
+      batch_id: payload.shipment.batch_id,
       products_created: productsCreated,
       products_updated: productsUpdated,
       images_matched: imagesMatched,
       errors
     }
+
+    catalogCache.clear()
 
     return NextResponse.json(result)
   } catch (error) {

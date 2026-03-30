@@ -169,7 +169,7 @@ export default function ProductDetailPanel({ products, selectedIndex, onClose, o
               {product.stem_length ? <DetailRow label="Stem Length" value={product.stem_length} /> : null}
               <DetailRow
                 label={mode === 'b2b' ? 'Price Per Stem' : 'Price Per Bunch'}
-                value={`SAR ${(mode === 'b2c' ? product.price_per_bunch ?? product.price * 10 : product.price).toFixed(2)}`}
+                value={`SAR ${(mode === 'b2c' ? product.price_b2c ?? product.price * 10 : product.price).toFixed(2)}`}
               />
               <DetailRow label="Stock" value={product.stock ? 'YES' : 'NO'} />
               {product.color ? <DetailRow label="Color" value={product.color} /> : null}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import CatalogHeader from '@/components/catalog/CatalogHeader'
 import FilterBar from '@/components/catalog/FilterBar'
 import ProductRow from '@/components/catalog/ProductRow'
@@ -18,6 +18,7 @@ interface CatalogClientProps {
 const ORIGINS = Object.keys(ORIGIN_LABELS) as Origin[]
 
 export default function CatalogClient({ allProducts }: CatalogClientProps) {
+  const [products, setProducts] = useState<CatalogProduct[]>(allProducts)
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const [mode, setMode] = useState<'b2b' | 'b2c'>(() =>
     typeof window !== 'undefined' && sessionStorage.getItem('b2b_authenticated') === 'true' ? 'b2b' : 'b2c'
@@ -28,15 +29,32 @@ export default function CatalogClient({ allProducts }: CatalogClientProps) {
   const [stockOnly, setStockOnly] = useState(false)
   const { toasts } = useCart()
 
+  const fetchCatalog = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/catalog?mode=${mode}`, { cache: 'no-store' })
+      if (!response.ok) return
+      const data = (await response.json()) as { products?: CatalogProduct[] }
+      if (Array.isArray(data.products)) {
+        setProducts(data.products)
+      }
+    } catch {
+      // Keep last successful in-memory dataset.
+    }
+  }, [mode])
+
   useEffect(() => {
     const isB2B = sessionStorage.getItem('b2b_authenticated') === 'true'
     setMode(isB2B ? 'b2b' : 'b2c')
   }, [])
 
-  const flowerTypes = useMemo(() => Array.from(new Set(allProducts.map((p) => p.name))).sort(), [allProducts])
+  useEffect(() => {
+    void fetchCatalog()
+  }, [fetchCatalog, mode])
+
+  const flowerTypes = useMemo(() => Array.from(new Set(products.map((p) => p.name))).sort(), [products])
 
   const filteredProducts = useMemo(() => {
-    let results = allProducts
+    let results = products
 
     if (origin) {
       results = results.filter((p) => p.origin === origin)
@@ -56,7 +74,7 @@ export default function CatalogClient({ allProducts }: CatalogClientProps) {
     }
 
     return results
-  }, [allProducts, origin, flowerType, stockOnly, search])
+  }, [products, origin, flowerType, stockOnly, search])
 
   const handleExportPDF = () => {
     const params = new URLSearchParams()
@@ -99,7 +117,7 @@ export default function CatalogClient({ allProducts }: CatalogClientProps) {
         onStockToggle={() => setStockOnly((prev) => !prev)}
         origins={ORIGINS}
         flowerTypes={flowerTypes}
-        totalCount={allProducts.length}
+        totalCount={products.length}
         filteredCount={filteredProducts.length}
         mode={mode}
       />

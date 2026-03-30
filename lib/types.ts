@@ -27,7 +27,10 @@ export interface Product {
   origin: Origin
   image_url: string | null
   active: boolean
+  show_b2b: boolean
+  show_b2c: boolean
   price?: number | null
+  price_b2c?: number | null
   stock?: boolean | null
   created_at: string
 }
@@ -37,6 +40,7 @@ export interface ShipmentProduct {
   shipment_id: string
   product_id: string
   price: number
+  price_b2c: number | null
   price_per_bunch: number | null
   stock: boolean
   units_per_box: number | null
@@ -54,6 +58,7 @@ export interface CatalogProduct {
   origin: Origin
   image_url: string | null
   price: number
+  price_b2c: number | null
   price_per_bunch: number | null
   stock: boolean
   arrival_date: string
@@ -75,7 +80,10 @@ export interface IngestPayload {
     stem_length?: string | null
     color?: string | null
     price: number
+    price_b2c?: number | null
     stock: boolean
+    show_b2b?: boolean
+    show_b2c?: boolean
     units_per_box?: number | null
     units_per_bunch?: number | null
     image_url?: string | null

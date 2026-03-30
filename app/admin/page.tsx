@@ -185,7 +185,6 @@ export default function AdminPage() {
             </div>
             <ProductTable
               products={products}
-              images={images}
               activeShipmentId={activeShipment?.id ?? null}
               activateMissingOnly={activateMissingOnly}
               onEdit={(product) => {
@@ -202,44 +201,19 @@ export default function AdminPage() {
                 await loadProducts()
                 pushToast('success', 'Product deleted')
               }}
-              onToggleActive={async (product) => {
-                const response = await fetch(`/api/admin/products/${product.id}`, {
-                  method: 'PUT',
+              onPatch={async (productId, payload) => {
+                const response = await fetch(`/api/admin/products/${productId}`, {
+                  method: 'PATCH',
                   headers: { ...authHeaders, 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ active: !product.active })
+                  body: JSON.stringify(payload)
                 })
                 if (!response.ok) {
-                  pushToast('error', 'Failed to update product status')
-                  return
+                  pushToast('error', 'Failed to update product')
+                  return false
                 }
                 await loadProducts()
                 pushToast('success', 'Product updated')
-              }}
-              onToggleStock={async (product, stock, shipmentId) => {
-                const response = await fetch(`/api/admin/products/${product.id}`, {
-                  method: 'PATCH',
-                  headers: { ...authHeaders, 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ stock, shipment_id: shipmentId ?? undefined })
-                })
-                if (!response.ok) {
-                  pushToast('error', 'Failed to update stock')
-                  return
-                }
-                await loadProducts()
-                pushToast('success', 'Stock updated')
-              }}
-              onAssignImage={async (product, imageUrl) => {
-                const response = await fetch(`/api/admin/products/${product.id}`, {
-                  method: 'PATCH',
-                  headers: { ...authHeaders, 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ image_url: imageUrl })
-                })
-                if (!response.ok) {
-                  pushToast('error', 'Failed to assign image')
-                  return
-                }
-                await loadProducts()
-                pushToast('success', 'Image assigned')
+                return true
               }}
             />
             {productsLoading ? (
@@ -386,9 +360,13 @@ IMPORTANT MAPPING RULES:
   Ecuador → ecuador
   Colombia → colombia
 - Use "Specification" column as stem_length (e.g. "50cm")
-- Set stock: true for all products (active shipment)
-- Price is not in this document — set price: 0 for now
-  (prices will be updated manually in admin panel)
+- Include both visibility toggles:
+  show_b2b: true
+  show_b2c: true
+- Set stock: true for available products, false when unavailable
+- Include dual pricing:
+  price: per stem
+  price_b2c: per bunch (typically price * 10)
 - Use "Units Per Box" as units_per_box
 - Use "Units Per Bunch / Stem" as units_per_bunch
 
@@ -412,8 +390,11 @@ Body:
       "variety": "[Variety Name District]",
       "origin": "[mapped origin value]",
       "stem_length": "[Specification value]",
-      "price": 0,
+      "price": 1.60,
+      "price_b2c": 16.00,
       "stock": true,
+      "show_b2b": true,
+      "show_b2c": true,
       "units_per_box": [number or null],
       "units_per_bunch": [number or null]
     }

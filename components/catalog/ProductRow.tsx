@@ -97,7 +97,7 @@ export default function ProductRow({ product, index, mode, onOpenDetail, priorit
         <div className="flex items-baseline gap-1">
           <span className="hidden md:inline text-[10px] text-brand-green/40 font-mono mr-0.5">SAR</span>
           <span className="font-mono text-[15px] md:text-[17px] font-[500] text-brand-green">
-            {mode === 'b2c' ? (product.price_per_bunch ?? product.price * 10).toFixed(2) : product.price.toFixed(2)}
+            {mode === 'b2c' ? (product.price_b2c ?? product.price * 10).toFixed(2) : product.price.toFixed(2)}
           </span>
         </div>
       </div>

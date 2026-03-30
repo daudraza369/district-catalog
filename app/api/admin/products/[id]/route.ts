@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase'
 import { type Origin } from '@/lib/types'
 import { apiError, sanitizeText } from '@/lib/api'
 import { validateAdminRequest } from '@/lib/auth'
+import { catalogCache } from '@/lib/catalog-cache'
 
 const ORIGINS: Origin[] = ['netherlands', 'ethiopia', 'kenya', 'saudi', 'south_africa', 'italy', 'ecuador', 'colombia', 'other']
 
@@ -50,6 +51,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return apiError(404, 'Product not found', 'NOT_FOUND')
     }
 
+    catalogCache.clear()
+
     return NextResponse.json({ product: data })
   } catch (error) {
     return apiError(500, 'Internal server error', 'INTERNAL_ERROR', error instanceof Error ? error.message : 'Unknown error')
@@ -73,6 +76,8 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       return apiError(404, 'Product not found', 'NOT_FOUND')
     }
 
+    catalogCache.clear()
+
     return NextResponse.json({ success: true })
   } catch (error) {
     return apiError(500, 'Internal server error', 'INTERNAL_ERROR', error instanceof Error ? error.message : 'Unknown error')
@@ -86,8 +91,17 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       return unauthorized
     }
 
-    const body = (await request.json()) as { stock?: boolean; shipment_id?: string; image_url?: string | null }
+    const body = (await request.json()) as {
+      stock?: boolean
+      shipment_id?: string
+      image_url?: string | null
+      show_b2b?: boolean
+      show_b2c?: boolean
+      price?: number
+      price_b2c?: number | null
+    }
     const supabase = createAdminClient()
+    let didUpdate = false
 
     if (typeof body.image_url !== 'undefined') {
       const { error: imageUpdateError } = await supabase
@@ -97,32 +111,58 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       if (imageUpdateError) {
         return apiError(500, 'Failed to update product image', 'DB_QUERY_FAILED', imageUpdateError.message)
       }
+      didUpdate = true
     }
 
-    if (typeof body.stock === 'boolean') {
-      let shipmentId = body.shipment_id
-      if (!shipmentId) {
-        const { data: activeShipment, error: activeShipmentError } = await supabase
-          .from('shipments')
-          .select('id')
-          .eq('is_active', true)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
-        if (activeShipmentError || !activeShipment) {
-          return apiError(400, 'Active shipment not found', 'ACTIVE_SHIPMENT_REQUIRED')
-        }
-        shipmentId = String(activeShipment.id)
+    if (typeof body.show_b2b === 'boolean' || typeof body.show_b2c === 'boolean') {
+      const { error: visibilityUpdateError } = await supabase
+        .from('products')
+        .update({
+          show_b2b: typeof body.show_b2b === 'boolean' ? body.show_b2b : undefined,
+          show_b2c: typeof body.show_b2c === 'boolean' ? body.show_b2c : undefined
+        })
+        .eq('id', params.id)
+      if (visibilityUpdateError) {
+        return apiError(500, 'Failed to update visibility', 'DB_QUERY_FAILED', visibilityUpdateError.message)
       }
+      didUpdate = true
+    }
+
+    if (typeof body.stock === 'boolean' || typeof body.price === 'number' || typeof body.price_b2c === 'number' || body.price_b2c === null) {
+      const { data: activeShipment, error: activeShipmentError } = await supabase
+        .from('shipments')
+        .select('id')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (activeShipmentError || !activeShipment) {
+        return apiError(400, 'Active shipment not found', 'ACTIVE_SHIPMENT_REQUIRED')
+      }
+      const shipmentId = String(activeShipment.id)
+
+      const shipmentUpdate: {
+        stock?: boolean
+        price?: number
+        price_b2c?: number | null
+      } = {}
+      if (typeof body.stock === 'boolean') shipmentUpdate.stock = body.stock
+      if (typeof body.price === 'number') shipmentUpdate.price = body.price
+      if (typeof body.price_b2c === 'number' || body.price_b2c === null) shipmentUpdate.price_b2c = body.price_b2c
 
       const { error: stockError } = await supabase
         .from('shipment_products')
-        .update({ stock: body.stock })
+        .update(shipmentUpdate)
         .eq('shipment_id', shipmentId)
         .eq('product_id', params.id)
       if (stockError) {
-        return apiError(500, 'Failed to update stock', 'DB_QUERY_FAILED', stockError.message)
+        return apiError(500, 'Failed to update shipment product', 'DB_QUERY_FAILED', stockError.message)
       }
+      didUpdate = true
+    }
+
+    if (didUpdate) {
+      catalogCache.clear()
     }
 
     return NextResponse.json({ success: true })

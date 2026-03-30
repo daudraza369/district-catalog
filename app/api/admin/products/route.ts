@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase'
 import { type Origin } from '@/lib/types'
 import { apiError, sanitizeText } from '@/lib/api'
 import { validateAdminRequest } from '@/lib/auth'
+import { catalogCache } from '@/lib/catalog-cache'
 
 const ORIGINS: Origin[] = ['netherlands', 'ethiopia', 'kenya', 'saudi', 'south_africa', 'italy', 'ecuador', 'colombia', 'other']
 
@@ -32,17 +33,22 @@ export async function GET(request: NextRequest) {
     if (activeShipment) {
       const { data: shipmentProducts } = await supabase
         .from('shipment_products')
-        .select('product_id, price, stock')
+        .select('product_id, price, price_b2c, stock')
         .eq('shipment_id', activeShipment.id)
 
-      const shipmentMap = new Map<string, { price: number; stock: boolean }>()
+      const shipmentMap = new Map<string, { price: number; price_b2c: number | null; stock: boolean }>()
       for (const row of shipmentProducts ?? []) {
-        shipmentMap.set(String(row.product_id), { price: Number(row.price), stock: Boolean(row.stock) })
+        shipmentMap.set(String(row.product_id), {
+          price: Number(row.price),
+          price_b2c: row.price_b2c === null ? null : Number(row.price_b2c),
+          stock: Boolean(row.stock)
+        })
       }
 
       for (const product of products) {
         const shipmentData = shipmentMap.get(product.id as string)
         product.price = shipmentData?.price ?? null
+        product.price_b2c = shipmentData?.price_b2c ?? null
         product.stock = shipmentData?.stock ?? null
       }
     }
@@ -72,6 +78,9 @@ export async function POST(request: NextRequest) {
       units_per_bunch?: number | null
       image_url?: string | null
       active?: boolean
+      show_b2b?: boolean
+      show_b2c?: boolean
+      price_b2c?: number
     }
 
     const name = typeof body.name === 'string' ? sanitizeText(body.name) : ''
@@ -114,7 +123,9 @@ export async function POST(request: NextRequest) {
           color,
           origin: body.origin,
           image_url: typeof body.image_url === 'string' ? sanitizeText(body.image_url) : null,
-          active: body.active ?? true
+          active: body.active ?? true,
+          show_b2b: body.show_b2b ?? true,
+          show_b2c: body.show_b2c ?? true
         })
         .select('*')
         .single()
@@ -130,7 +141,9 @@ export async function POST(request: NextRequest) {
           color,
           origin: body.origin,
           image_url: typeof body.image_url === 'string' ? sanitizeText(body.image_url) : body.image_url,
-          active: body.active ?? true
+          active: body.active ?? true,
+          show_b2b: body.show_b2b ?? product.show_b2b ?? true,
+          show_b2c: body.show_b2c ?? product.show_b2c ?? true
         })
         .eq('id', product.id)
         .select('*')
@@ -170,6 +183,7 @@ export async function POST(request: NextRequest) {
         .from('shipment_products')
         .update({
           price,
+          price_b2c: typeof body.price_b2c === 'number' ? body.price_b2c : price * 10,
           stock,
           units_per_box: body.units_per_box ?? null,
           units_per_bunch: body.units_per_bunch ?? null
@@ -183,6 +197,7 @@ export async function POST(request: NextRequest) {
         shipment_id: activeShipment.id,
         product_id: product.id,
         price,
+        price_b2c: typeof body.price_b2c === 'number' ? body.price_b2c : price * 10,
         stock,
         units_per_box: body.units_per_box ?? null,
         units_per_bunch: body.units_per_bunch ?? null
@@ -191,6 +206,8 @@ export async function POST(request: NextRequest) {
         return apiError(500, 'Failed to create shipment product', 'DB_QUERY_FAILED', createShipmentProductError.message)
       }
     }
+
+    catalogCache.clear()
 
     return NextResponse.json({ product }, { status: 201 })
   } catch (error) {

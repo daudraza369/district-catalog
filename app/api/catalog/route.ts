@@ -3,10 +3,12 @@ import { createAdminClient } from '@/lib/supabase'
 import { type CatalogProduct, type Origin, type Shipment } from '@/lib/types'
 import { apiError } from '@/lib/api'
 import { getFlowerImagePath } from '@/lib/flower-images'
+import { CATALOG_CACHE_TTL_MS, catalogCache, getCatalogCacheKey } from '@/lib/catalog-cache'
 
 type QueryRow = {
   id: string
   price: number
+  price_b2c: number | null
   stock: boolean
   units_per_box: number | null
   units_per_bunch: number | null
@@ -20,6 +22,8 @@ type QueryRow = {
         origin: Origin
         image_url: string | null
         active: boolean
+        show_b2b: boolean
+        show_b2c: boolean
       }
     | Array<{
         id: string
@@ -30,6 +34,8 @@ type QueryRow = {
         origin: Origin
         image_url: string | null
         active: boolean
+        show_b2b: boolean
+        show_b2c: boolean
       }>
     | null
   shipments: Shipment[] | Shipment | null
@@ -44,6 +50,8 @@ type RowProduct = {
   origin: Origin
   image_url: string | null
   active: boolean
+  show_b2b: boolean
+  show_b2c: boolean
 }
 
 function getProductValue(row: QueryRow): RowProduct | null {
@@ -70,6 +78,17 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = createAdminClient()
     const searchParams = request.nextUrl.searchParams
+    const mode = (searchParams.get('mode') === 'b2b' ? 'b2b' : 'b2c') as 'b2b' | 'b2c'
+    const cacheKey = getCatalogCacheKey(mode, searchParams)
+    const cached = catalogCache.get(cacheKey)
+    if (cached && Date.now() - cached.cachedAt < CATALOG_CACHE_TTL_MS) {
+      return NextResponse.json({
+        shipment: cached.shipment,
+        products: cached.products,
+        total: cached.total
+      })
+    }
+
     const shipmentId = searchParams.get('shipment_id')
     const origin = searchParams.get('origin')
     const stockParam = searchParams.get('stock')
@@ -81,6 +100,7 @@ export async function GET(request: NextRequest) {
       .select(`
         id,
         price,
+        price_b2c,
         stock,
         units_per_box,
         units_per_bunch,
@@ -92,7 +112,9 @@ export async function GET(request: NextRequest) {
           color,
           origin,
           image_url,
-          active
+          active,
+          show_b2b,
+          show_b2c
         ),
         shipments!inner (
           id,
@@ -120,6 +142,13 @@ export async function GET(request: NextRequest) {
       return apiError(500, 'Failed to load catalog products', 'DB_QUERY_FAILED', error.message)
     }
     const rows = (data ?? []) as unknown as QueryRow[]
+    const visibilityByShipmentProductId = new Map<string, { show_b2b: boolean; show_b2c: boolean }>()
+    for (const row of rows) {
+      const product = getProductValue(row)
+      if (product) {
+        visibilityByShipmentProductId.set(row.id, { show_b2b: product.show_b2b, show_b2c: product.show_b2c })
+      }
+    }
     let shipment: Shipment | null = rows[0] ? getShipmentValue(rows[0]) : null
     if (!shipment) {
       const shipmentLookup = shipmentId
@@ -158,7 +187,8 @@ export async function GET(request: NextRequest) {
           origin: product.origin,
           image_url: product.image_url ?? null,
           price: Number(row.row.price),
-          price_per_bunch: Number(row.row.price) * 10,
+          price_b2c: row.row.price_b2c !== null ? Number(row.row.price_b2c) : Number(row.row.price) * 10,
+          price_per_bunch: row.row.price_b2c !== null ? Number(row.row.price_b2c) : Number(row.row.price) * 10,
           stock: row.row.stock,
           arrival_date: getShipmentValue(row.row)?.arrival_date ?? '',
           units_per_box: row.row.units_per_box ?? null,
@@ -169,6 +199,11 @@ export async function GET(request: NextRequest) {
       .filter((row) => (flowerType ? row.name === flowerType : true))
       .filter((row) => (stockFilter === null ? true : row.stock === stockFilter))
       .filter((row) => (search ? `${row.name} ${row.variety}`.toLowerCase().includes(search) : true))
+      .filter((rowWithMode) => {
+        const visibility = visibilityByShipmentProductId.get(rowWithMode.shipment_product_id)
+        if (!visibility) return false
+        return mode === 'b2b' ? visibility.show_b2b === true : visibility.show_b2c === true
+      })
 
     for (const product of catalogProducts) {
       if (!product.image_url) {
@@ -199,11 +234,15 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({
+    const responsePayload = {
       shipment,
       products: catalogProducts,
       total: catalogProducts.length
-    })
+    }
+
+    catalogCache.set(cacheKey, { ...responsePayload, cachedAt: Date.now() })
+
+    return NextResponse.json(responsePayload)
   } catch (error) {
     return apiError(500, 'Internal server error', 'INTERNAL_ERROR', error instanceof Error ? error.message : 'Unknown error')
   }
